@@ -1,0 +1,124 @@
+package RPS;
+
+
+import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+public class server {
+
+//Array of type ClientServiceThread, for all connected clients
+	public static ArrayList<clientThread> Clients = new ArrayList<clientThread>();
+	static int clientCount = 0; //number of clients
+	
+	public static void main(String[] args) throws Exception {
+		
+//Create the GUI frame and components
+		JFrame frame = new JFrame ("RPS Game Server");
+		frame.setBounds(100, 100, 300, 300);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+		frame.setVisible(true);
+		
+		JLabel connectionStatusLabel = new JLabel("No Clients Connected");
+		connectionStatusLabel.setBounds(80, 30, 200, 30);
+		connectionStatusLabel.setForeground(Color.red);
+		frame.getContentPane().add(connectionStatusLabel);
+		
+		//create the welcoming server's socket
+		ServerSocket welcomeSocket = new ServerSocket(6789);
+		
+		//thread that always listens for new connection from clients
+	   	new Thread (new Runnable(){ @Override
+ 	   		public void run() {
+		
+		
+	while (true)
+  				try {
+  					//listen for clients connection request
+	   			Socket connectionSocket = welcomeSocket.accept();
+	   			
+	   			//send message from server to client through buffer writer
+	   			DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+	   			
+	   			//receive from client through buffer reader
+	   			BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
+	   			String name = inFromClient.readLine();
+	   			
+	   			
+	   			new Thread(new Runnable() {
+
+				@Override
+				public void run() {
+					String oldTotalPlayers = "";
+					while (true) {
+						try {
+							
+							String newTotalPlayers = "totalPlayers";
+							for (clientThread client : server.Clients) {
+								if(client.getversus().equals("") && !client.clientName().equals(name)) {
+	   								newTotalPlayers += "," + client.clientName();
+								}
+							}
+							//send data when client count connected changes
+							if (!newTotalPlayers.equals(oldTotalPlayers)) { 
+								
+							oldTotalPlayers = newTotalPlayers;
+							outToClient.writeBytes(newTotalPlayers +"\n");
+							}
+						}
+						catch(Exception ex) {
+					}
+				}
+	   				
+				}}).start();
+	
+			clientCount++;
+
+ 	   		//add the new client to the client's array 
+	   			Clients.add(new clientThread(name, clientCount, connectionSocket, Clients, inFromClient, outToClient));
+ 	   			//start the new client's thread 
+	   			Clients.get(Clients.size() - 1).start();
+
+	   		}
+	catch (Exception ex){
+                  
+	    } 	
+  }}).start();
+	   	
+ 	   	
+	 	//thread to always get the count of connected clients and update the label and send to clients
+			new Thread (new Runnable(){ @Override
+ 	   		public void run() {
+	
+	 	   	while (true) {
+ 	   			//print the amount of clients connected if there are more than one
+	  				if (Clients.size() > 0) //if there are one or more clients print their number
+	 	   			{
+	 	   				if (Clients.size() == 1)
+	 	   					connectionStatusLabel.setText("1 Client Connected");
+	 	   				else
+	 	   					connectionStatusLabel.setText(Clients.size() + " Clients Connected");
+	 	   				 	   				
+	 	   					connectionStatusLabel.setForeground(Color.blue);
+	 	   			}
+	 	   			else { 
+	 	   				
+	 	   				connectionStatusLabel.setText("No Clients Connected");
+		   				connectionStatusLabel.setForeground(Color.red);
+	 	   				
+	 	   			}
+	 	   	}
+		}}).start(); 
+ 
+    }
+    
+	}
+
+
