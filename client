@@ -1,0 +1,333 @@
+package RPS;
+
+
+import java.awt.Color;
+import javax.swing.JFrame;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JTextField;
+import java.awt.Font;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import javax.swing.JComboBox;
+import javax.swing.SwingConstants;
+
+
+public class client {
+	
+	static Socket clientSocket;
+
+	public static void main(String[] args) {
+		
+		
+//Create the GUI frame and components
+		JFrame frame = new JFrame("RCP Game Client");
+		frame.setBounds(100,100,500,500);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().setLayout(null);
+		frame.setVisible(true);
+
+//BUTTON
+		JButton ConnectButton = new JButton("Connect");
+		ConnectButton.setBounds(320,40,100,30);
+		frame.getContentPane().add(ConnectButton);
+		ConnectButton.setVisible(true);
+		
+		JButton DisconnectButton = new JButton("Disconnect");
+		DisconnectButton.setBounds(320,40,100,30);
+		frame.getContentPane().add(DisconnectButton);
+		DisconnectButton.setVisible(false);
+		
+		JButton PlayButton = new JButton("Play");
+		PlayButton.setBounds(320,90,100,30);
+		frame.getContentPane().add(PlayButton);
+		PlayButton.setVisible(false);
+		
+		JButton StopButton = new JButton("Stop");
+		StopButton.setBounds(320,90,100,30);
+		frame.getContentPane().add(StopButton);
+		StopButton.setVisible(false);
+		
+		JButton RockButton = new JButton("Rock");
+		RockButton.setBounds(200,150, 100, 50);
+		frame.getContentPane().add(RockButton);
+		RockButton.setVisible(false);
+		
+		JButton PaperButton = new JButton("Paper");
+		PaperButton.setBounds(200,220,100,50);
+		frame.getContentPane().add(PaperButton);
+		PaperButton.setVisible(false);
+		
+		JButton ScissorButton = new JButton("Scissor");
+		ScissorButton.setBounds(200,290,100,50);
+		frame.getContentPane().add(ScissorButton);
+		ScissorButton.setVisible(false);
+		
+//LABEL
+		JLabel nameLabel = new JLabel("Client Name");
+		nameLabel.setBounds(20,40,100,30);
+		nameLabel.setFont(new Font("Calibri", Font.BOLD, 16));
+		nameLabel.setHorizontalAlignment(SwingConstants.LEFT);
+		nameLabel.setVerticalAlignment(SwingConstants.CENTER);
+		frame.getContentPane().add(nameLabel);
+		nameLabel.setVisible(true);
+		
+		JLabel playLabel = new JLabel("Play with");
+		playLabel.setBounds(20,90,100,30);
+		playLabel.setFont(new Font("Calibri", Font.BOLD, 16));
+		playLabel.setHorizontalAlignment(SwingConstants.LEFT);
+		playLabel.setVerticalAlignment(SwingConstants.CENTER);
+		frame.getContentPane().add(playLabel);
+		playLabel.setVisible(false);
+		
+		JLabel ResultLabel = new JLabel("");
+		ResultLabel.setBounds(20,370,500,30);
+		ResultLabel.setFont(new Font("Calibri", Font.BOLD, 14));
+		ResultLabel.setHorizontalAlignment(SwingConstants.LEFT);
+		ResultLabel.setVerticalAlignment(SwingConstants.CENTER);
+		frame.getContentPane().add(ResultLabel);
+		ResultLabel.setVisible(false);
+		
+//TEXT FIELD
+		JTextField nameTF = new JTextField("");
+		nameTF.setBounds(140,40,150,30);
+		nameTF.setFont(new Font("Calibri", Font.BOLD, 16));
+		frame.getContentPane().add(nameTF);
+		nameTF.setVisible(true);
+		
+		JComboBox<String> playComboBox = new JComboBox<String>();
+		playComboBox.setBounds(140,90,150,30);
+		playComboBox.setFont(new Font("Calibri", Font.BOLD, 16));
+		frame.getContentPane().add(playComboBox);
+		playComboBox.setVisible(false);
+
+
+//USER ACTIONS 
+	    
+//ACTION: Connect button clicked
+		ConnectButton.addActionListener(new ActionListener() {  @Override
+			
+			public void actionPerformed(ActionEvent a) {
+			if (!nameTF.getText().equals("")) {
+				String ClientName = nameTF.getText();
+				
+				//GUI components become visible/invisible
+				nameTF.setEnabled(false);
+				ConnectButton.setVisible(false);
+				DisconnectButton.setVisible(true);
+				playLabel.setVisible(true);
+				playComboBox.setVisible(true);
+				PlayButton.setVisible(true);
+				
+				//call function thread
+				thread(frame, ClientName, nameTF, ConnectButton, DisconnectButton, PlayButton, StopButton, RockButton, PaperButton, ScissorButton,playLabel, ResultLabel, playComboBox);
+				}	
+			}
+			
+		});
+		
+	}
+	
+public static void thread(JFrame frame, String ClientName, JTextField nameTF, JButton ConnectButton, JButton DisconnectButton, JButton PlayButton, JButton StopButton, JButton RockButton, JButton PaperButton, JButton ScissorButton, JLabel playLabel, JLabel ResultLabel, JComboBox<String> playComboBox) {
+	try {
+		
+		//create a new socket to connect with the server application 
+		clientSocket = new Socket("localhost", 6789);
+		
+		//Send to server
+		DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
+		String sendingSentence = ClientName + "\n";
+		outToServer.writeBytes(sendingSentence);
+		
+		//Create a buffer reader and connect it to the socket's input stream and read data from server
+		BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+		String receivedSentence = inFromServer.readLine();
+
+		//Thread to always read messages from the server 
+		new Thread(new Runnable() {
+
+			@Override
+			public void run() {
+				while (true) {
+					try {
+						String receivedSentence;
+						receivedSentence = inFromServer.readLine();
+						
+						if (receivedSentence.startsWith("totalPlayers")) {
+							String[] totalPlayers = receivedSentence.split(",");
+							playComboBox.removeAllItems();
+							
+							for (int i = 1; i<totalPlayers.length;i++)
+								playComboBox.addItem(totalPlayers[i]);
+							
+						}
+						else if (receivedSentence.startsWith("Picked")) {
+							String[] pickedClient = receivedSentence.split(",");
+							playComboBox.setSelectedItem(pickedClient[1]);
+							playComboBox.setEnabled(false);
+							PlayButton.setVisible(false);
+							StopButton.setVisible(true);
+							RockButton.setVisible(true);
+							PaperButton.setVisible(true);
+							ScissorButton.setVisible(true);
+							ResultLabel.setVisible(false);
+							System.out.println(pickedClient[0]);
+							System.out.println(pickedClient[1]);
+								
+						}
+						
+					}
+					catch (Exception ex) {
+						
+					}
+
+				}
+				
+			}
+			
+		}).start();
+		
+//ACTION: Play button clicked
+		PlayButton.addActionListener(new ActionListener() {
+			
+			public void actionPerformed(ActionEvent e) {
+				String opponentPlayer = playComboBox.getSelectedItem().toString();
+				
+				try {
+					if (opponentPlayer!=null ) {
+						playComboBox.setSelectedItem(opponentPlayer);
+						playComboBox.setEnabled(false);
+						
+						//GUI changes
+						PlayButton.setVisible(false);
+						ResultLabel.setVisible(false);
+						StopButton.setVisible(true);
+						RockButton.setVisible(true);
+						PaperButton.setVisible(true);
+						ScissorButton.setVisible(true);
+
+						
+						outToServer.writeBytes("versus," + ClientName +"," + opponentPlayer + "," + "\n");
+					}
+				}
+				catch (Exception ex) {
+			}
+			
+		}});
+		
+//ACTION: Stop button clicked
+		StopButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+				outToServer.writeBytes("Stop \n");
+				StopButton.setVisible(false);
+				PlayButton.setVisible(true);
+				playComboBox.setEnabled(true);
+				RockButton.setEnabled(true);
+				RockButton.setVisible(false);
+				PaperButton.setEnabled(true);
+				PaperButton.setVisible(false);
+				ScissorButton.setEnabled(true);
+				ScissorButton.setVisible(false);
+				
+				
+				
+				} catch (Exception ex) {
+				}
+			}
+	});
+		
+//ACTION: Rock button clicked
+		RockButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					outToServer.writeBytes("ROCK\n");
+				} catch (IOException e1) {
+
+					e1.printStackTrace();
+				}
+				RockButton.setEnabled(false);
+				PaperButton.setEnabled(false);
+				ScissorButton.setEnabled(false);
+			}
+		});
+		
+//ACTION: Paper button clicked
+		PaperButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					outToServer.writeBytes("PAPER\n");
+				} catch (IOException e1) {
+
+					e1.printStackTrace();
+				}
+				RockButton.setEnabled(false);
+				PaperButton.setEnabled(false);
+				ScissorButton.setEnabled(false);
+			}
+		});
+		
+//ACTION: Scissor button clicked		
+		ScissorButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					outToServer.writeBytes("SCISSOR\n");
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				RockButton.setEnabled(false);
+				PaperButton.setEnabled(false);
+				ScissorButton.setEnabled(false);
+			}
+		});
+		
+//ACTION: Disconnect button clicked
+		DisconnectButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					outToServer.writeBytes("-Remove\n");
+				} catch (IOException e1) {
+
+					e1.printStackTrace();
+				}
+				try {
+					clientSocket.close();
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				} //close socket
+				frame.setVisible(false);
+		
+			}
+		});
+		
+//ACTION: Disconnect on close 	
+		frame.addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent we) {
+				try {
+					//send data to server with key word remove
+					outToServer.writeBytes("-Remove\n");
+					//close socket
+					clientSocket.close();	    			
+	    			System.exit(0);
+				}
+					catch (Exception ex) {
+						System.out.println(ex.toString());
+				}
+			}
+			
+		});
+		frame.setVisible(true);
+}catch(Exception ex) {
+
+}
+		}
+}
+
