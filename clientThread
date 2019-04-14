@@ -1,0 +1,180 @@
+package RPS;
+
+
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.InputStreamReader;
+import java.net.Socket;
+import java.util.ArrayList;
+
+//import elec463.lab5.clientThread;
+//import elec463.lab5.server;
+
+public class clientThread extends Thread {
+
+//the ClientServiceThread class extends the Thread class and has the following parameters
+	private String name; //client name
+	public int number; //client name
+	public Socket connectionSocket; //client socket
+	ArrayList<clientThread> Clients; //array of all clients
+
+	
+	private BufferedReader inFromClient;
+	private DataOutputStream outToClient;
+	
+	public String versus = "";
+	public String action = "";
+	
+	//constructor for clientThread
+	public clientThread(String name, int number, Socket connectionSocket, ArrayList<clientThread> Clients, BufferedReader inFromClient, DataOutputStream outToClient) {
+		this.name = name;
+		this.number = number;
+		this.connectionSocket = connectionSocket;
+		this.Clients = Clients;
+		this.inFromClient = inFromClient;
+		this.outToClient = outToClient;
+		
+	}
+	//get name
+	public String clientName() {
+		return name;
+	}
+	//get output through buffered reader
+	public DataOutputStream getOutput() {
+		return outToClient;
+	}
+	public void setversus(String versus) {
+		this.versus = versus;
+	}
+	public String getversus() {
+		return versus;
+	}
+				
+	public void run() {
+		try {
+			
+			
+			while (true) {
+				//receive from client
+				inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));;
+				String clientSentence = inFromClient.readLine();				
+				
+				//Remove client 
+				if (clientSentence.startsWith("-Remove")){
+					for (int i = 0; i< Clients.size();i++) {
+						if (Clients.get(i).number == number) {
+						Clients.remove(i);
+						//break;
+						
+						}
+							}
+
+					}
+				
+				else if (clientSentence.startsWith("Stop")) {
+					for (clientThread client : server.Clients) {
+						if(client.name.equals(this.versus)) {
+					
+					this.versus = "";
+					client.action = "";
+					client.versus = "";
+					break;
+					}
+						}
+					}
+				
+				//allows the opponent to play as soon as the first player has chosen
+				else if (clientSentence.startsWith("versus")) {
+				String connectPlayers[] = clientSentence.split(",");
+				
+			
+					this.versus = connectPlayers[2];
+					
+					DataOutputStream pickedClient = null;
+					
+					for (clientThread client : server.Clients)
+					{
+						if (client.name.equals(connectPlayers[2])) {
+							client.setversus(connectPlayers[1]);
+						    pickedClient = client.getOutput();
+							
+							client.outToClient.writeBytes("Picked," + connectPlayers[1] + "\n");
+							pickedClient.writeBytes("Picked," + connectPlayers[1] + "\n");
+							break;
+							
+						
+						}
+					}
+	
+				}
+				
+				else if (clientSentence.startsWith("Rock")) {
+					for (clientThread client: server.Clients) {
+						if (client.name.equals(this.versus) && client.action!=null) {
+							String client1 = "Rock";
+							String client2 = client.action;
+							if (client1.equals("Rock") & client2.equals("Scissors")) {
+								client.outToClient.writeBytes("WinnerRock\n");
+								
+							}
+							else if (client1.equals("Rock") & client2.equals("Rock")) {
+								client.outToClient.writeBytes("TieRock\n");
+							}
+							else if (client1.equals("Rock") & client2.equals("Paper")) {
+								client.outToClient.writeBytes("LoseRock\n");
+							}
+						}
+					}
+					
+				}
+				else if (clientSentence.startsWith("Paper")) {
+					for (clientThread client: server.Clients) {
+						if (client.name.equals(this.versus) && client.action!=null) {
+							String client1 = "Paper";
+							String client2 = client.action;
+							if (client1.equals("Paper") & client2.equals("Rock")) {
+								client.outToClient.writeBytes("WinnerPaper\n");
+								
+							}
+							else if (client1.equals("Paper") & client2.equals("Paper")) {
+								client.outToClient.writeBytes("TiePaper\n");
+							}
+							else if (client1.equals("Paper") & client2.equals("Scissors")) {
+								client.outToClient.writeBytes("LosePaper\n");
+							}
+						}
+					}
+					
+				}
+				else if (clientSentence.startsWith("Scissors")) {
+					for (clientThread client: server.Clients) {
+						if (client.name.equals(this.versus) && client.action!=null) {
+							String client1 = "Scissors";
+							String client2 = client.action;
+							if (client1.equals("Scissors") & client2.equals("Paper")) {
+								client.outToClient.writeBytes("WinnerScissors \n");
+								
+							}
+							else if (client1.equals("Scissors") & client2.equals("Scissors")) {
+								client.outToClient.writeBytes("TieScissors \n");
+							}
+							else if (client1.equals("Scissors") & client2.equals("Rock")) {
+								client.outToClient.writeBytes("LoseScissors \n");
+							}
+						}
+					}
+					
+				}
+				}
+		}
+				
+			
+				
+		catch (Exception ex) {
+		}
+	}
+
+}
+
+
+
